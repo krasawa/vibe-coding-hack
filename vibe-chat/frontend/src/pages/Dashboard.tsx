@@ -26,6 +26,7 @@ import {
 } from '@mui/material';
 import { Add, PersonAdd, Check, Close, Group } from '@mui/icons-material';
 import ChatIcon from '@mui/icons-material/Chat';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { RootState, AppDispatch } from '../store';
 import {
   getContacts,
@@ -33,6 +34,7 @@ import {
   sendContactRequest,
   acceptContactRequest,
   rejectContactRequest,
+  removeContact,
 } from '../store/slices/contactSlice';
 import { createOrGetPrivateChat } from '../store/slices/chatSlice';
 import { useNavigate } from 'react-router-dom';
@@ -65,6 +67,8 @@ const Dashboard: React.FC = () => {
   const [openCreateGroup, setOpenCreateGroup] = useState(false);
   const [username, setUsername] = useState('');
   const [tabValue, setTabValue] = useState(0);
+  const [contactToRemove, setContactToRemove] = useState<string | null>(null);
+  const [openRemoveConfirm, setOpenRemoveConfirm] = useState(false);
 
   const { contacts, contactRequests, loading, error } = useSelector((state: RootState) => state.contact);
   const { loading: chatLoading } = useSelector((state: RootState) => state.chat);
@@ -106,6 +110,23 @@ const Dashboard: React.FC = () => {
 
   const handleRejectRequest = async (requestId: string) => {
     await dispatch(rejectContactRequest(requestId));
+  };
+
+  const handleOpenRemoveConfirm = (contactId: string) => {
+    setContactToRemove(contactId);
+    setOpenRemoveConfirm(true);
+  };
+
+  const handleCloseRemoveConfirm = () => {
+    setContactToRemove(null);
+    setOpenRemoveConfirm(false);
+  };
+
+  const handleConfirmRemoveContact = async () => {
+    if (contactToRemove) {
+      await dispatch(removeContact(contactToRemove));
+      handleCloseRemoveConfirm();
+    }
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -193,17 +214,32 @@ const Dashboard: React.FC = () => {
               <React.Fragment key={contact.id}>
                 <ListItem
                   secondaryAction={
-                    <Tooltip title="Start chat">
-                      <IconButton
-                        edge="end"
-                        aria-label="start chat"
-                        onClick={() => handleStartChat(contact.id)}
-                        disabled={chatLoading}
-                        color="primary"
-                      >
-                        <ChatIcon />
-                      </IconButton>
-                    </Tooltip>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Tooltip title="Start chat">
+                        <IconButton
+                          edge="end"
+                          aria-label="start chat"
+                          onClick={() => handleStartChat(contact.id)}
+                          disabled={chatLoading}
+                          color="primary"
+                          sx={{ mr: 0.5 }}
+                        >
+                          <ChatIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Remove contact">
+                        <IconButton
+                          edge="end"
+                          aria-label="remove contact"
+                          onClick={() => handleOpenRemoveConfirm(contact.id)}
+                          disabled={loading}
+                          color="error"
+                          sx={{ ml: 0.5 }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   }
                 >
                   <ListItemAvatar>
@@ -300,6 +336,27 @@ const Dashboard: React.FC = () => {
           <Button onClick={handleAddContactClose}>Cancel</Button>
           <Button onClick={handleSendRequest} variant="contained">
             Send Request
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmation Dialog for Removing Contact */}
+      <Dialog
+        open={openRemoveConfirm}
+        onClose={handleCloseRemoveConfirm}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Remove Contact?"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Are you sure you want to remove this contact? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseRemoveConfirm}>Cancel</Button>
+          <Button onClick={handleConfirmRemoveContact} color="error" autoFocus>
+            Remove
           </Button>
         </DialogActions>
       </Dialog>

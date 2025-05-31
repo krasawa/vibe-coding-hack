@@ -74,24 +74,26 @@ export const sendContactRequest = async (
       return next(createAppError('Already in your contacts', 400));
     }
 
-    // Check if request already exists
-    const existingRequest = await prisma.contactRequest.findFirst({
+    // Check if a pending request already exists
+    const existingPendingRequest = await prisma.contactRequest.findFirst({
       where: {
         OR: [
           {
             senderId: req.user.id,
             receiverId: receiverUser.id,
+            status: 'pending',
           },
           {
             senderId: receiverUser.id,
             receiverId: req.user.id,
+            status: 'pending',
           },
         ],
       },
     });
 
-    if (existingRequest) {
-      return next(createAppError('Contact request already exists', 400));
+    if (existingPendingRequest) {
+      return next(createAppError('A pending contact request already exists with this user.', 400));
     }
 
     // Create contact request
