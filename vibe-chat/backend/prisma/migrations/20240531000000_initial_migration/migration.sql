@@ -98,13 +98,16 @@ CREATE INDEX "User_username_idx" ON "User"("username");
 CREATE INDEX "User_email_idx" ON "User"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Contact_userId_contactId_key" ON "Contact"("userId", "contactId");
+
+-- CreateIndex
 CREATE INDEX "Contact_userId_idx" ON "Contact"("userId");
 
 -- CreateIndex
 CREATE INDEX "Contact_contactId_idx" ON "Contact"("contactId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Contact_userId_contactId_key" ON "Contact"("userId", "contactId");
+CREATE UNIQUE INDEX "ContactRequest_senderId_receiverId_key" ON "ContactRequest"("senderId", "receiverId");
 
 -- CreateIndex
 CREATE INDEX "ContactRequest_senderId_idx" ON "ContactRequest"("senderId");
@@ -116,19 +119,16 @@ CREATE INDEX "ContactRequest_receiverId_idx" ON "ContactRequest"("receiverId");
 CREATE INDEX "ContactRequest_status_idx" ON "ContactRequest"("status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ContactRequest_senderId_receiverId_key" ON "ContactRequest"("senderId", "receiverId");
+CREATE INDEX "Chat_isGroup_idx" ON "Chat"("isGroup");
 
 -- CreateIndex
-CREATE INDEX "Chat_isGroup_idx" ON "Chat"("isGroup");
+CREATE UNIQUE INDEX "UserChat_userId_chatId_key" ON "UserChat"("userId", "chatId");
 
 -- CreateIndex
 CREATE INDEX "UserChat_userId_idx" ON "UserChat"("userId");
 
 -- CreateIndex
 CREATE INDEX "UserChat_chatId_idx" ON "UserChat"("chatId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "UserChat_userId_chatId_key" ON "UserChat"("userId", "chatId");
 
 -- CreateIndex
 CREATE INDEX "Message_senderId_idx" ON "Message"("senderId");
@@ -140,13 +140,13 @@ CREATE INDEX "Message_chatId_idx" ON "Message"("chatId");
 CREATE INDEX "Message_createdAt_idx" ON "Message"("createdAt");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Reaction_userId_messageId_emoji_key" ON "Reaction"("userId", "messageId", "emoji");
+
+-- CreateIndex
 CREATE INDEX "Reaction_userId_idx" ON "Reaction"("userId");
 
 -- CreateIndex
 CREATE INDEX "Reaction_messageId_idx" ON "Reaction"("messageId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Reaction_userId_messageId_emoji_key" ON "Reaction"("userId", "messageId", "emoji");
 
 -- AddForeignKey
 ALTER TABLE "Contact" ADD CONSTRAINT "Contact_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -177,3 +177,9 @@ ALTER TABLE "Reaction" ADD CONSTRAINT "Reaction_userId_fkey" FOREIGN KEY ("userI
 
 -- AddForeignKey
 ALTER TABLE "Reaction" ADD CONSTRAINT "Reaction_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "Message"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Create test users
+INSERT INTO "User" ("id", "username", "email", "password", "displayName", "createdAt", "updatedAt", "isOnline")
+VALUES 
+('1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p', 'testuser', 'test@example.com', '$2a$10$iMGE/QzVKJZG1a6nxAlh2.XaPA.4wNfUM7nVoeUmI08YVJ0Ae2O5S', 'Test User', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, false),
+('2b3c4d5e-6f7g-8h9i-0j1k-2l3m4n5o6p7q', 'testuser2', 'test2@example.com', '$2a$10$iMGE/QzVKJZG1a6nxAlh2.XaPA.4wNfUM7nVoeUmI08YVJ0Ae2O5S', 'Test User 2', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, false); 

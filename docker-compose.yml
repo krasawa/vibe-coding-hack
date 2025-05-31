@@ -32,9 +32,18 @@ services:
       AWS_S3_BUCKET: vibe-chat-local
       AWS_REGION: us-east-1
       CORS_ORIGIN: http://localhost:3000
+      USE_MOCK_S3: "true"
     depends_on:
       postgres:
         condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Running database migrations...' &&
+        npx prisma generate &&
+        npx prisma migrate deploy &&
+        echo 'Starting backend server...' &&
+        npm run dev
+      "
 
   frontend:
     build:
@@ -52,19 +61,5 @@ services:
     depends_on:
       - backend
 
-  # Local S3-compatible storage for development
-  localstack:
-    image: localstack/localstack:latest
-    ports:
-      - "4566:4566"
-    environment:
-      - SERVICES=s3
-      - DEBUG=1
-      - DATA_DIR=/tmp/localstack/data
-    volumes:
-      - ./vibe-chat/scripts/localstack-init.sh:/docker-entrypoint-initaws.d/init.sh
-      - localstack_data:/tmp/localstack/data
-
 volumes:
-  postgres_data:
-  localstack_data: 
+  postgres_data: 

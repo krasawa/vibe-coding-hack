@@ -340,6 +340,13 @@ const ChatPage: React.FC = () => {
                     src={msg.imageUrl}
                     alt="Message attachment"
                     style={{ maxWidth: '100%', borderRadius: 4 }}
+                    onError={(e) => {
+                      console.error(`Failed to load image: ${msg.imageUrl}`);
+                      // Only replace if not a data URI
+                      if (!msg.imageUrl.startsWith('data:')) {
+                        e.currentTarget.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4AgSEh0nVzMdJAAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAANRSURBVDjLfZNLaBNRFIabyftJJpkknzQ2SaVNpugglcc0qAhBEJC0SuwLXYqCG8EIQRAEQXRRF1J3cdFFu9CiC0GlBUSxNFaiKAYSCG2svJVkkswrM5mZq4ubgjV+sODcc+/57zn/Oee0Y+MU5OXl6VJSkpgQQqHX6xHgybKszk6n03eEkKNut9sJw3DL0dHRu1PRIIYQ0AcHB7UrV65kGAwGSCAQWFZVdYrjuBVBEBxDQ0PQZDKpkUgkPDY2djAwMNDs8XiOVFVxrwz6+vrqLl26VK9pmg1BEGvNZnNYURRZUZT5sbGxY4PBgC/zTU5OzpjN5kNBEGxdXV1TMKJ5DVgikaiamJiY0+v15x0Ox23btv2GYVhVFAUwDEMXFxeDk5OT9z0eT7nD4YDBYBAODQ3FRkdHG0Oh0OVXCrq7u89MTEy0GwyGY5qmXZ2cnLxSV1dndblckGVZQBQFgKIonE6nqzg7O5uNRCJFLpdLtdvtYGZmZs/v99dCqqqgpqYmBMMwQRRFaTweP37mzJn2wsJCrLCwkM/Ozob29vY+TExMfDBNy7JarfLIyEgjz/NGQRDKcnJyYtlsVpiamnoKq6qqUL1er6mqKk9OTu5pb29fsdlsjNVqzSJJshy2bVCWnZ0N6XQ6oCgKUlJSwmazmc1kMg232+2XZVldW1v7vASqqqry+/2J4eHh17W1tV/tdjuAIAiEYVjA87zfZrPFOI4DCNLzPM8nEon25ubmd5OTk3f9fn85pGnawLKsDcMwwPO8BUEQIEmSDcMwFgzDgM1mQ1iWlQRBYERRfDA3N9cSCASWTSYTYbPZShRFySEIwiFJEpzJZGxZWZn2yvB4PPfPnj07UlJS4iBI8uHy8vLHhYWFT3Nzc58zmQxSUFAAnj9/niwoKPiZSCSOh8Phh7m5uaeqq6tL6+vrvxBIdXX1JYvFQpMk+aem67cikUi0v7+/HoZhiKKozeXlZaCqKiivrHTW1dUJg4ODdxKJxB+r1ZrU6/UbMMTzPKwoyrdoNNrodruzhYWFaFlZmbyysgIymQwkSRIaj8elQCCQpGlaCgaDqXA4PE/TtEbTtELTtJpKpb7B/xeCxWIJlJeXe2ma1lRV/ZFMJj+kUqn5dDr9G4bhVadT5Cl6AAAAAElFTkSuQmCC';
+                      }
+                    }}
                   />
                 </Box>
               )}

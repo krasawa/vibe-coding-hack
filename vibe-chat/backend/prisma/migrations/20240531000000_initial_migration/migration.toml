@@ -1,0 +1,9 @@
+# This is an empty Prisma migration metadata file
+# This file tracks the migrations applied to the database
+
+# It follows the spec in https://www.prisma.io/docs/reference/api-reference/command-reference#migrate-deploy
+
+# The content is not relevant, but the file needs to exist
+
+migration_name = "20240531000000_initial_migration"
+checksum = "1234567890abcdef1234567890abcdef" 
