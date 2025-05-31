@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, ChangeEvent, FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
@@ -11,13 +11,36 @@ import {
   Divider,
   CircularProgress,
   Alert,
+  Tooltip,
 } from '@mui/material';
-import { Send, AttachFile, Close } from '@mui/icons-material';
+import { Send as SendIcon, AttachFile as AttachFileIcon, Close as CloseIcon } from '@mui/icons-material';
+import SettingsIcon from '@mui/icons-material/Settings';
+import FormatBoldIcon from '@mui/icons-material/FormatBold';
+import FormatItalicIcon from '@mui/icons-material/FormatItalic';
 import { format } from 'date-fns';
 import { RootState, AppDispatch } from '../store';
-import { getChat, getChatMessages, sendMessage } from '../store/slices/chatSlice';
+import { getChat, getChatMessages, sendMessage, markChatAsRead } from '../store/slices/chatSlice';
 import socketService from '../services/socketService';
 import MessageReactions from '../components/MessageReactions';
+import EditGroupChat from '../components/EditGroupChat';
+
+// Function to format message content with HTML tags
+const formatMessage = (content: string) => {
+  if (!content) return '';
+  
+  // Replace **text** with <strong>text</strong> for bold
+  let formattedContent = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // Replace *text* or _text_ with <em>text</em> for italic
+  formattedContent = formattedContent.replace(/(\*|_)(.*?)(\*|_)/g, '<em>$2</em>');
+  
+  return formattedContent;
+};
+
+// Function to parse HTML content safely
+const parseHTML = (html: string) => {
+  return { __html: html };
+};
 
 const ChatPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -27,15 +50,24 @@ const ChatPage: React.FC = () => {
   const [typingTimeoutId, setTypingTimeoutId] = useState<NodeJS.Timeout | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
+  const [editGroupOpen, setEditGroupOpen] = useState(false);
+  const navigate = useNavigate();
 
   const { currentChat, messages, loading, error, typingUsers } = useSelector((state: RootState) => state.chat);
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
 
+  // Filter typing users to exclude current user
+  const currentTypingUsers = chatId && typingUsers[chatId] 
+    ? typingUsers[chatId].filter(id => id !== user?.id)
+    : [];
+
   useEffect(() => {
     if (chatId) {
       dispatch(getChat(chatId));
       dispatch(getChatMessages({ chatId }));
+      dispatch(markChatAsRead(chatId));
       
       // Join the chat room via socket
       socketService.joinChat(chatId);
@@ -124,9 +156,66 @@ const ChatPage: React.FC = () => {
     fileInputRef.current?.click();
   };
 
+  // Add format text functions
+  const insertFormat = (format: string) => {
+    if (!messageInputRef.current) return;
+    
+    const input = messageInputRef.current;
+    const { selectionStart, selectionEnd } = input;
+    const selectedText = message.substring(selectionStart, selectionEnd);
+    
+    let formattedText = '';
+    if (format === 'bold') {
+      formattedText = `**${selectedText || 'bold text'}**`;
+    } else if (format === 'italic') {
+      formattedText = `_${selectedText || 'italic text'}_`;
+    }
+    
+    const newMessage = 
+      message.substring(0, selectionStart) + 
+      formattedText + 
+      message.substring(selectionEnd);
+    
+    setMessage(newMessage);
+    
+    // Focus back on input after inserting format
+    setTimeout(() => {
+      input.focus();
+      // Place cursor after the inserted formatted text
+      const newCursorPosition = selectionStart + formattedText.length;
+      input.setSelectionRange(newCursorPosition, newCursorPosition);
+    }, 0);
+  };
+
+  // Check if the current user is the group owner
+  const isGroupOwner = () => {
+    if (!currentChat || !currentChat.isGroup || !user) return false;
+    
+    // Find the current user in participants and check if they're the owner
+    // Use explicit casting to avoid type errors
+    const currentUserParticipant = currentChat.participants.find(
+      (p: any) => p.id === user.id
+    );
+    
+    // The isOwner field might be added by the backend but not in the TypeScript interface
+    return Boolean(currentUserParticipant && currentUserParticipant.isOwner);
+  };
+
+  // Handle group chat deleted or left
+  const handleGroupExited = () => {
+    navigate('/');
+  };
+
   if (!chatId || !currentChat) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100%',
+        }}
+      >
         {loading ? (
           <CircularProgress />
         ) : (
@@ -138,29 +227,31 @@ const ChatPage: React.FC = () => {
     );
   }
 
-  // Get typing users excluding current user
-  const currentTypingUsers = chatId && typingUsers[chatId] 
-    ? typingUsers[chatId].filter((id: string) => id !== user?.id)
-    : [];
-
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Chat Header */}
-      <Box sx={{ p: 2, borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }}>
+      <Box 
+        sx={{ 
+          p: 2, 
+          borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Avatar
-            src={
-              currentChat.isGroup
-                ? undefined
-                : currentChat.participants.find((p: any) => p.id !== user?.id)?.avatarUrl
-            }
+            src={currentChat.isGroup ? 
+              (currentChat as any).avatarUrl : 
+              currentChat.participants.find((p: any) => p.id !== user?.id)?.avatarUrl}
+            sx={{ mr: 2 }}
           >
             {(currentChat.name ||
               currentChat.participants.find((p: any) => p.id !== user?.id)?.displayName ||
               '?')[0].toUpperCase()}
           </Avatar>
-          <Box sx={{ ml: 2 }}>
-            <Typography variant="h6">
+          <Box>
+            <Typography variant="h6" noWrap>
               {currentChat.name ||
                 currentChat.participants.find((p: any) => p.id !== user?.id)?.displayName ||
                 currentChat.participants.find((p: any) => p.id !== user?.id)?.username}
@@ -174,154 +265,190 @@ const ChatPage: React.FC = () => {
             </Typography>
           </Box>
         </Box>
+        
+        {currentChat.isGroup && (
+          <IconButton
+            color="primary"
+            aria-label="group settings"
+            onClick={() => setEditGroupOpen(true)}
+          >
+            <SettingsIcon />
+          </IconButton>
+        )}
       </Box>
 
-      {/* Error Message */}
-      {error && <Alert severity="error">{error}</Alert>}
-
-      {/* Messages Area */}
+      {/* Messages */}
       <Box
         sx={{
-          p: 2,
           flexGrow: 1,
           overflow: 'auto',
+          p: 2,
           display: 'flex',
           flexDirection: 'column',
+          gap: 1,
         }}
       >
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress />
-          </Box>
-        ) : messages.length === 0 ? (
-          <Box sx={{ textAlign: 'center', p: 3 }}>
-            <Typography variant="body1" color="text.secondary">
-              No messages yet. Start the conversation!
-            </Typography>
-          </Box>
-        ) : (
-          messages.map((msg) => (
-            <Box
-              key={msg.id}
+        {messages.map((msg: any) => (
+          <Box
+            key={msg.id}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignSelf: msg.senderId === user?.id ? 'flex-end' : 'flex-start',
+              maxWidth: '80%',
+            }}
+          >
+            <Paper
+              elevation={1}
               sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: msg.senderId === user?.id ? 'flex-end' : 'flex-start',
-                mb: 2,
+                p: 2,
+                borderRadius: 2,
+                backgroundColor: msg.senderId === user?.id ? 'primary.light' : 'background.paper',
+                color: msg.senderId === user?.id ? 'primary.contrastText' : 'text.primary',
               }}
             >
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: msg.senderId === user?.id ? 'row-reverse' : 'row',
-                  alignItems: 'flex-end',
-                }}
-              >
-                {msg.senderId !== user?.id && (
-                  <Avatar
-                    src={msg.sender.avatarUrl}
-                    sx={{ width: 30, height: 30, mr: 1 }}
-                  >
-                    {(msg.sender.displayName || msg.sender.username)[0].toUpperCase()}
-                  </Avatar>
+              {!currentChat.isGroup || msg.senderId === user?.id ? null : (
+                <Typography variant="caption" fontWeight="bold" display="block" gutterBottom>
+                  {msg.sender?.displayName || msg.sender?.username}
+                </Typography>
+              )}
+              
+              {msg.imageUrl && (
+                <Box sx={{ mb: 1 }}>
+                  <img
+                    src={msg.imageUrl}
+                    alt="Message attachment"
+                    style={{ maxWidth: '100%', borderRadius: 4 }}
+                  />
+                </Box>
+              )}
+              
+              <Typography
+                variant="body1"
+                dangerouslySetInnerHTML={parseHTML(formatMessage(msg.content))}
+              />
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+                <Typography variant="caption" color="inherit" sx={{ opacity: 0.7 }}>
+                  {format(new Date(msg.createdAt), 'HH:mm')}
+                </Typography>
+                
+                {msg.readBy && msg.readBy.length > 0 && msg.senderId === user?.id && (
+                  <Typography variant="caption" sx={{ ml: 1, opacity: 0.7 }}>
+                    Read
+                  </Typography>
                 )}
-                <Paper
-                  elevation={1}
-                  sx={{
-                    p: 1.5,
-                    borderRadius: 2,
-                    maxWidth: '70%',
-                    backgroundColor: msg.senderId === user?.id ? 'primary.light' : 'background.paper',
-                    color: msg.senderId === user?.id ? 'white' : 'inherit',
-                  }}
-                >
-                  {msg.imageUrl && (
-                    <Box sx={{ mb: 1 }}>
-                      <img
-                        src={msg.imageUrl}
-                        alt="Shared"
-                        style={{ maxWidth: '100%', borderRadius: 4 }}
-                      />
-                    </Box>
-                  )}
-                  <Typography variant="body1">{msg.content}</Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
-                    <Typography variant="caption" color={msg.senderId === user?.id ? 'white' : 'text.secondary'}>
-                      {format(new Date(msg.createdAt), 'HH:mm')}
-                    </Typography>
-                    {msg.senderId === user?.id && (
-                      <Typography variant="caption" color={msg.senderId === user?.id ? 'white' : 'text.secondary'}>
-                        {msg.readBy.length > 0 ? 'Read' : 'Sent'}
-                      </Typography>
-                    )}
-                  </Box>
-                  
-                  {/* Add message reactions */}
-                  {user?.id && (
-                    <MessageReactions
-                      messageId={msg.id}
-                      reactions={msg.reactions || []}
-                      currentUserId={user.id}
-                    />
-                  )}
-                </Paper>
               </Box>
-            </Box>
-          ))
-        )}
-        <div ref={messagesEndRef} />
+            </Paper>
+            
+            <MessageReactions
+              message={msg}
+              currentUserId={user?.id || ''}
+            />
+          </Box>
+        ))}
         
-        {/* Typing indicator */}
         {currentTypingUsers.length > 0 && (
-          <Box sx={{ p: 1, pl: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-              {currentTypingUsers.length === 1
-                ? 'Someone is typing...'
-                : 'Several people are typing...'}
+          <Box sx={{ p: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              Someone is typing...
             </Typography>
           </Box>
         )}
+        
+        <div ref={messagesEndRef} />
       </Box>
 
       {/* Message Input */}
-      <Box sx={{ p: 2, borderTop: '1px solid rgba(0, 0, 0, 0.12)' }}>
+      <Box
+        component="form"
+        onSubmit={handleSendMessage}
+        sx={{
+          p: 2,
+          borderTop: '1px solid rgba(0, 0, 0, 0.12)',
+          backgroundColor: 'background.paper',
+        }}
+      >
         {image && (
-          <Box sx={{ mb: 1, p: 1, border: '1px dashed grey', borderRadius: 1 }}>
-            <Typography variant="body2">File: {image.name}</Typography>
+          <Box
+            sx={{
+              mb: 2,
+              p: 1,
+              border: '1px solid rgba(0, 0, 0, 0.12)',
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Typography variant="body2" noWrap sx={{ maxWidth: '80%' }}>
+              {image.name}
+            </Typography>
             <IconButton size="small" onClick={() => setImage(null)}>
-              <Typography variant="caption" color="error">
-                Remove
-              </Typography>
+              <CloseIcon />
             </IconButton>
           </Box>
         )}
-        <form onSubmit={handleSendMessage}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton onClick={handleClickAttach}>
-              <AttachFile />
-            </IconButton>
-            <input
-              type="file"
-              ref={fileInputRef}
-              style={{ display: 'none' }}
-              onChange={handleFileSelect}
-              accept="image/*"
-            />
-            <TextField
-              fullWidth
-              placeholder="Type a message..."
-              variant="outlined"
-              size="small"
-              value={message}
-              onChange={handleMessageChange}
-              sx={{ ml: 1 }}
-            />
-            <IconButton color="primary" type="submit" disabled={!message.trim() && !image} sx={{ ml: 1 }}>
-              <Send />
-            </IconButton>
-          </Box>
-        </form>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TextField
+            fullWidth
+            placeholder="Type a message..."
+            variant="outlined"
+            size="small"
+            value={message}
+            onChange={handleMessageChange}
+            inputRef={messageInputRef}
+            InputProps={{
+              startAdornment: (
+                <Box sx={{ display: 'flex', mr: 1 }}>
+                  <Tooltip title="Bold">
+                    <IconButton size="small" onClick={() => insertFormat('bold')}>
+                      <FormatBoldIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Italic">
+                    <IconButton size="small" onClick={() => insertFormat('italic')}>
+                      <FormatItalicIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              ),
+            }}
+          />
+          
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+          />
+          
+          <IconButton onClick={handleClickAttach}>
+            <AttachFileIcon />
+          </IconButton>
+          
+          <IconButton type="submit" color="primary" disabled={!message.trim() && !image}>
+            <SendIcon />
+          </IconButton>
+        </Box>
       </Box>
+
+      {/* Edit Group Chat Dialog */}
+      {currentChat && currentChat.isGroup && (
+        <EditGroupChat
+          open={editGroupOpen}
+          onClose={() => setEditGroupOpen(false)}
+          chatId={currentChat.id}
+          currentName={currentChat.name || ''}
+          currentDescription={currentChat.description || ''}
+          currentParticipants={currentChat.participants}
+          isOwner={isGroupOwner()}
+          onSuccess={() => dispatch(getChat(chatId))}
+          onDelete={handleGroupExited}
+        />
+      )}
     </Box>
   );
 };

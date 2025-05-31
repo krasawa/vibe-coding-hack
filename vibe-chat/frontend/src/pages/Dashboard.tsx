@@ -22,8 +22,10 @@ import {
   Tabs,
   Tab,
   Badge,
+  Tooltip,
 } from '@mui/material';
 import { Add, PersonAdd, Check, Close, Group } from '@mui/icons-material';
+import ChatIcon from '@mui/icons-material/Chat';
 import { RootState, AppDispatch } from '../store';
 import {
   getContacts,
@@ -32,6 +34,7 @@ import {
   acceptContactRequest,
   rejectContactRequest,
 } from '../store/slices/contactSlice';
+import { createOrGetPrivateChat } from '../store/slices/chatSlice';
 import { useNavigate } from 'react-router-dom';
 import CreateGroupChat from '../components/CreateGroupChat';
 
@@ -64,6 +67,7 @@ const Dashboard: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
 
   const { contacts, contactRequests, loading, error } = useSelector((state: RootState) => state.contact);
+  const { loading: chatLoading } = useSelector((state: RootState) => state.chat);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
@@ -110,6 +114,18 @@ const Dashboard: React.FC = () => {
 
   const handleGroupCreated = (chatId: string) => {
     navigate(`/chat/${chatId}`);
+  };
+
+  const handleStartChat = async (contactId: string) => {
+    try {
+      const result = await dispatch(createOrGetPrivateChat(contactId)).unwrap();
+      const chatId = result.data.chat.id;
+      
+      // Navigate to the chat
+      navigate(`/chat/${chatId}`);
+    } catch (err) {
+      console.error('Failed to start chat:', err);
+    }
   };
 
   return (
@@ -175,7 +191,21 @@ const Dashboard: React.FC = () => {
           <List>
             {contacts.map((contact) => (
               <React.Fragment key={contact.id}>
-                <ListItem>
+                <ListItem
+                  secondaryAction={
+                    <Tooltip title="Start chat">
+                      <IconButton
+                        edge="end"
+                        aria-label="start chat"
+                        onClick={() => handleStartChat(contact.id)}
+                        disabled={chatLoading}
+                        color="primary"
+                      >
+                        <ChatIcon />
+                      </IconButton>
+                    </Tooltip>
+                  }
+                >
                   <ListItemAvatar>
                     <Avatar src={contact?.avatarUrl || ''}>
                       {((contact?.displayName || contact?.username) || '?')[0].toUpperCase()}

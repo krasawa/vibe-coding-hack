@@ -11,11 +11,16 @@ import {
   TextField,
   InputAdornment,
   Avatar,
+  Button,
 } from '@mui/material';
+import Stack from '@mui/material/Stack';
 import ListItemButton from '@mui/material/ListItemButton';
-import { Search } from '@mui/icons-material';
+import { Search, Group } from '@mui/icons-material';
+import ChatIcon from '@mui/icons-material/Chat';
 import { RootState, AppDispatch } from '../store';
 import { getChats, setCurrentChat } from '../store/slices/chatSlice';
+import StartChatDialog from './StartChatDialog';
+import CreateGroupChat from './CreateGroupChat';
 
 interface SidebarProps {
   onItemClick?: () => void;
@@ -23,6 +28,8 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ onItemClick }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [startChatOpen, setStartChatOpen] = useState(false);
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
 
   const { chats } = useSelector((state: RootState) => state.chat);
   const dispatch = useDispatch<AppDispatch>();
@@ -40,6 +47,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onItemClick }) => {
   const handleChatClick = (chat: any) => {
     dispatch(setCurrentChat(chat));
     navigate(`/chat/${chat.id}`);
+    if (onItemClick) onItemClick();
+  };
+
+  const handleGroupCreated = (chatId: string) => {
+    dispatch(getChats()); // Refresh the chat list
+    navigate(`/chat/${chatId}`);
     if (onItemClick) onItemClick();
   };
   
@@ -61,10 +74,33 @@ const Sidebar: React.FC<SidebarProps> = ({ onItemClick }) => {
         <Typography variant="h6" sx={{ mb: 2 }}>
           Vibe Chat
         </Typography>
+        
+        {/* Action Buttons */}
+        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<ChatIcon />}
+            onClick={() => setStartChatOpen(true)}
+            sx={{ flex: 1 }}
+          >
+            New Chat
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Group />}
+            onClick={() => setCreateGroupOpen(true)}
+            sx={{ flex: 1 }}
+          >
+            New Group
+          </Button>
+        </Stack>
+        
         <TextField
           fullWidth
           variant="outlined"
-          placeholder="Search..."
+          placeholder="Search chats..."
           size="small"
           value={searchTerm}
           onChange={handleSearchChange}
@@ -84,7 +120,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onItemClick }) => {
         <List>
           {filteredChats.length === 0 ? (
             <ListItem>
-              <ListItemText primary="No chats found" />
+              <ListItemText 
+                primary={searchTerm ? "No chats match your search" : "No chats yet"} 
+                secondary={!searchTerm ? "Start a new chat or create a group to begin messaging" : undefined}
+              />
             </ListItem>
           ) : (
             filteredChats.map((chat: any) => (
@@ -94,14 +133,22 @@ const Sidebar: React.FC<SidebarProps> = ({ onItemClick }) => {
                   selected={location.pathname === `/chat/${chat.id}`}
                 >
                   <Avatar 
-                    src={chat.isGroup ? undefined : chat.participants[0]?.avatarUrl} 
-                    alt={chat.name || chat.participants[0]?.username}
+                    src={chat.isGroup ? chat.avatarUrl : chat.participants.find((p: any) => p.id !== chat.currentUserId)?.avatarUrl} 
+                    alt={chat.name || chat.participants.find((p: any) => p.id !== chat.currentUserId)?.username}
                     sx={{ mr: 2 }}
                   >
-                    {(chat.name || chat.participants[0]?.username || '?')[0].toUpperCase()}
+                    {chat.isGroup 
+                      ? (chat.name?.[0] || 'G').toUpperCase()
+                      : (chat.participants.find((p: any) => p.id !== chat.currentUserId)?.displayName?.[0] || 
+                         chat.participants.find((p: any) => p.id !== chat.currentUserId)?.username?.[0] || 'U').toUpperCase()}
                   </Avatar>
                   <ListItemText 
-                    primary={chat.name || chat.participants[0]?.displayName || chat.participants[0]?.username}
+                    primary={
+                      chat.isGroup 
+                        ? chat.name 
+                        : chat.participants.find((p: any) => p.id !== chat.currentUserId)?.displayName || 
+                          chat.participants.find((p: any) => p.id !== chat.currentUserId)?.username
+                    }
                     secondary={chat.lastMessage?.content || 'No messages yet'}
                     primaryTypographyProps={{
                       noWrap: true,
@@ -110,12 +157,42 @@ const Sidebar: React.FC<SidebarProps> = ({ onItemClick }) => {
                       noWrap: true,
                     }}
                   />
+                  {chat.unreadCount > 0 && (
+                    <Box
+                      sx={{
+                        backgroundColor: 'primary.main',
+                        color: 'primary.contrastText',
+                        borderRadius: '50%',
+                        minWidth: 20,
+                        height: 20,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        ml: 1,
+                      }}
+                    >
+                      {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                    </Box>
+                  )}
                 </ListItemButton>
               </ListItem>
             ))
           )}
         </List>
       </Box>
+
+      {/* Dialogs */}
+      <StartChatDialog
+        open={startChatOpen}
+        onClose={() => setStartChatOpen(false)}
+      />
+      
+      <CreateGroupChat
+        open={createGroupOpen}
+        onClose={() => setCreateGroupOpen(false)}
+        onSuccess={handleGroupCreated}
+      />
     </Box>
   );
 };

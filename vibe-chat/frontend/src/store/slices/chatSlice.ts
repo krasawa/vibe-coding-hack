@@ -8,6 +8,7 @@ interface User {
   avatarUrl?: string;
   isOnline: boolean;
   lastSeen?: Date;
+  isOwner?: boolean;
 }
 
 interface Message {
@@ -50,6 +51,8 @@ interface Chat {
   lastMessage?: Message;
   createdAt: string;
   updatedAt: string;
+  unreadCount: number;
+  avatarUrl?: string;
 }
 
 interface ChatState {
@@ -202,6 +205,32 @@ export const addReaction = createAsyncThunk(
   }
 );
 
+// Create or get private chat
+export const createOrGetPrivateChat = createAsyncThunk(
+  'chat/createOrGetPrivateChat',
+  async (participantId: string, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        return rejectWithValue('No token found');
+      }
+
+      const response = await axios.post(
+        '/api/chats/direct',
+        { userId: participantId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to create or get private chat');
+    }
+  }
+);
+
 const chatSlice = createSlice({
   name: 'chat',
   initialState,
@@ -219,7 +248,7 @@ const chatSlice = createSlice({
       if (state.currentChat && message.chatId === state.currentChat.id) {
         // Avoid duplicates
         if (!state.messages.some(m => m.id === message.id)) {
-          state.messages.unshift(message);
+          state.messages.push(message);
         }
       }
       
@@ -279,6 +308,14 @@ const chatSlice = createSlice({
       // It's useful for determining if a message is from the current user
       state.currentUserId = action.payload.id;
     },
+    markChatAsRead: (state, action: PayloadAction<string>) => {
+      const chatId = action.payload;
+      const chatIndex = state.chats.findIndex(c => c.id === chatId);
+      
+      if (chatIndex !== -1) {
+        state.chats[chatIndex].unreadCount = 0;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -317,7 +354,7 @@ const chatSlice = createSlice({
         getChatMessages.fulfilled,
         (state, action: PayloadAction<{ data: { messages: Message[] }; pagination: any }>) => {
           state.loading = false;
-          state.messages = action.payload.data.messages;
+          state.messages = action.payload.data.messages.reverse();
           state.pagination = action.payload.pagination;
         }
       )
@@ -338,7 +375,7 @@ const chatSlice = createSlice({
         if (state.currentChat && message.chatId === state.currentChat.id) {
           // Avoid duplicates
           if (!state.messages.some(m => m.id === message.id)) {
-            state.messages.unshift(message);
+            state.messages.push(message);
           }
         }
         
@@ -396,6 +433,27 @@ const chatSlice = createSlice({
       )
       .addCase(addReaction.rejected, (state, action) => {
         state.error = action.payload as string;
+      })
+      // Create or get private chat
+      .addCase(createOrGetPrivateChat.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createOrGetPrivateChat.fulfilled, (state, action: PayloadAction<{ data: { chat: Chat } }>) => {
+        state.loading = false;
+        const chat = action.payload.data.chat;
+        
+        // Add to chats list if not already present
+        const existingChatIndex = state.chats.findIndex(c => c.id === chat.id);
+        if (existingChatIndex === -1) {
+          state.chats.unshift(chat);
+        }
+        
+        state.currentChat = chat;
+      })
+      .addCase(createOrGetPrivateChat.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       });
   },
 });
@@ -408,5 +466,6 @@ export const {
   addUserTyping,
   removeUserTyping,
   setCurrentUser,
+  markChatAsRead,
 } = chatSlice.actions;
 export default chatSlice.reducer; 

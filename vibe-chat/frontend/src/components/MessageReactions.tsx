@@ -15,16 +15,28 @@ interface Reaction {
   };
 }
 
-interface MessageReactionsProps {
-  messageId: string;
+interface Message {
+  id: string;
   reactions: Reaction[];
+  senderId: string;
+  [key: string]: any; // Allow additional properties
+}
+
+interface MessageReactionsProps {
+  messageId?: string;
+  reactions?: Reaction[];
+  message?: Message;
   currentUserId: string;
 }
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢', '😡'];
 
-const MessageReactions: React.FC<MessageReactionsProps> = ({ messageId, reactions, currentUserId }) => {
+const MessageReactions: React.FC<MessageReactionsProps> = ({ messageId, reactions, message, currentUserId }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  
+  // Use either direct props or extract from message object
+  const actualMessageId = messageId || (message?.id || '');
+  const actualReactions = reactions || (message?.reactions || []);
 
   const handleOpenEmojiMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -38,7 +50,7 @@ const MessageReactions: React.FC<MessageReactionsProps> = ({ messageId, reaction
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `/api/messages/${messageId}/reactions`,
+        `/api/messages/${actualMessageId}/reactions`,
         { emoji },
         {
           headers: {
@@ -54,7 +66,7 @@ const MessageReactions: React.FC<MessageReactionsProps> = ({ messageId, reaction
 
   // Count reactions by emoji
   const reactionCounts: { [emoji: string]: { count: number; users: string[] } } = {};
-  reactions.forEach((reaction) => {
+  actualReactions.forEach((reaction) => {
     if (!reactionCounts[reaction.emoji]) {
       reactionCounts[reaction.emoji] = { count: 0, users: [] };
     }
