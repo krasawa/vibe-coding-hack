@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: vibeuser
+      POSTGRES_PASSWORD: vibepassword
+      POSTGRES_DB: vibechat
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vibeuser -d vibechat"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./vibe-chat/backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./vibe-chat/backend:/app
+      - /app/node_modules
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgres://vibeuser:vibepassword@postgres:5432/vibechat
+      JWT_SECRET: dev_jwt_secret_key_change_in_production
+      AWS_S3_BUCKET: vibe-chat-local
+      AWS_REGION: us-east-1
+      CORS_ORIGIN: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./vibe-chat/frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./vibe-chat/frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      REACT_APP_API_URL: http://localhost:4000
+      REACT_APP_WS_URL: ws://localhost:4000
+    depends_on:
+      - backend
+
+  # Local S3-compatible storage for development
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      - ./vibe-chat/scripts/localstack-init.sh:/docker-entrypoint-initaws.d/init.sh
+      - localstack_data:/tmp/localstack/data
+
+volumes:
+  postgres_data:
+  localstack_data: 

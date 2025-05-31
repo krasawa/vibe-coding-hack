@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String           @id @default(uuid())
+  username         String           @unique
+  email            String           @unique
+  password         String
+  displayName      String?
+  avatarUrl        String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  sentMessages     Message[]        @relation("MessageSender")
+  sentContactReqs  ContactRequest[] @relation("SentContactRequests")
+  receivedContactReqs ContactRequest[] @relation("ReceivedContactRequests")
+  sentContacts     Contact[]        @relation("UserContacts")
+  receivedContacts Contact[]        @relation("ContactUser")
+  userChats        UserChat[]
+  reactions        Reaction[]
+  isOnline         Boolean          @default(false)
+  lastSeen         DateTime?
+
+  @@index([username])
+  @@index([email])
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  userId    String
+  contactId String
+  createdAt DateTime @default(now())
+  user      User     @relation("UserContacts", fields: [userId], references: [id], onDelete: Cascade)
+  contact   User     @relation("ContactUser", fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contactId])
+  @@index([userId])
+  @@index([contactId])
+}
+
+model ContactRequest {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  status     String   @default("pending") // pending, accepted, rejected
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  sender     User     @relation("SentContactRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedContactRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model Chat {
+  id          String     @id @default(uuid())
+  name        String?
+  description String?
+  isGroup     Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  messages    Message[]
+  userChats   UserChat[]
+
+  @@index([isGroup])
+}
+
+model UserChat {
+  id        String   @id @default(uuid())
+  userId    String
+  chatId    String
+  isAdmin   Boolean  @default(false)
+  joinedAt  DateTime @default(now())
+  leftAt    DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chatId])
+  @@index([userId])
+  @@index([chatId])
+}
+
+model Message {
+  id        String     @id @default(uuid())
+  content   String
+  senderId  String
+  chatId    String
+  imageUrl  String?
+  readBy    String[]   @default([])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  sender    User       @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  chat      Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  reactions Reaction[]
+
+  @@index([senderId])
+  @@index([chatId])
+  @@index([createdAt])
+}
+
+model Reaction {
+  id        String   @id @default(uuid())
+  emoji     String
+  userId    String
+  messageId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId, emoji])
+  @@index([userId])
+  @@index([messageId])
+} 
