@@ -16,8 +16,6 @@ import { RootState, AppDispatch } from '../store';
 
 const Register: React.FC = () => {
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -48,19 +46,11 @@ const Register: React.FC = () => {
       return;
     }
     
-    await dispatch(register({ username, email, password, displayName }));
+    await dispatch(register({ username, password }));
   };
 
   const handleUsernameChange = (e: ChangeEvent<HTMLInputElement>) => {
     setUsername(e.target.value);
-  };
-
-  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
-  };
-
-  const handleDisplayNameChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setDisplayName(e.target.value);
   };
 
   const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -100,28 +90,6 @@ const Register: React.FC = () => {
               autoFocus
               value={username}
               onChange={handleUsernameChange}
-              disabled={loading}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              value={email}
-              onChange={handleEmailChange}
-              disabled={loading}
-            />
-            <TextField
-              margin="normal"
-              fullWidth
-              id="displayName"
-              label="Display Name (optional)"
-              name="displayName"
-              value={displayName}
-              onChange={handleDisplayNameChange}
               disabled={loading}
             />
             <TextField

@@ -30,7 +30,7 @@ const initialState: AuthState = {
 // Login thunk
 export const login = createAsyncThunk(
   'auth/login',
-  async (credentials: { email: string; password: string }, { rejectWithValue }) => {
+  async (credentials: { username: string; password: string }, { rejectWithValue }) => {
     try {
       const response = await axios.post('/api/auth/login', credentials);
       localStorage.setItem('token', response.data.token);
@@ -45,7 +45,7 @@ export const login = createAsyncThunk(
 export const register = createAsyncThunk(
   'auth/register',
   async (
-    userData: { username: string; email: string; password: string; displayName?: string },
+    userData: { username: string; password: string },
     { rejectWithValue }
   ) => {
     try {

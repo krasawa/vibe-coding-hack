@@ -39,34 +39,31 @@ export const register = async (
   next: NextFunction
 ) => {
   try {
-    const { username, email, password, displayName } = req.body;
+    const { username, password } = req.body;
 
-    // Check if username or email already exists
+    // Check if username already exists
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { username },
-          { email },
-        ],
+        username,
       },
     });
 
     if (existingUser) {
       return next(
-        createAppError('Username or email already in use', 400)
+        createAppError('Username already in use', 400)
       );
     }
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create new user
+    // Create new user - use username as email and displayName
     const newUser = await prisma.user.create({
       data: {
         username,
-        email,
+        email: `${username}@example.com`, // Generate a placeholder email
         password: hashedPassword,
-        displayName: displayName || username,
+        displayName: username,
       },
     });
 
@@ -84,21 +81,21 @@ export const login = async (
   next: NextFunction
 ) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    // Check if email and password exist
-    if (!email || !password) {
-      return next(createAppError('Please provide email and password', 400));
+    // Check if username and password exist
+    if (!username || !password) {
+      return next(createAppError('Please provide username and password', 400));
     }
 
-    // Find user by email
+    // Find user by username
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { username },
     });
 
     // Check if user exists & password is correct
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return next(createAppError('Incorrect email or password', 401));
+      return next(createAppError('Incorrect username or password', 401));
     }
 
     // Update last seen and online status
