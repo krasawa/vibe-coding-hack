@@ -77,6 +77,65 @@ export const getCurrentUser = createAsyncThunk('auth/getCurrentUser', async (_, 
   }
 });
 
+// Update user profile thunk
+export const updateUserProfile = createAsyncThunk(
+  'auth/updateUserProfile',
+  async (
+    profileData: { displayName?: string; avatar?: File },
+    { rejectWithValue }
+  ) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        return rejectWithValue('No token found');
+      }
+
+      const formData = new FormData();
+      if (profileData.displayName) {
+        formData.append('displayName', profileData.displayName);
+      }
+      if (profileData.avatar) {
+        formData.append('avatar', profileData.avatar);
+      }
+
+      const response = await axios.patch('/api/users/profile', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update profile');
+    }
+  }
+);
+
+// Change password thunk
+export const changePassword = createAsyncThunk(
+  'auth/changePassword',
+  async (
+    passwordData: { currentPassword: string; newPassword: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        return rejectWithValue('No token found');
+      }
+
+      const response = await axios.patch('/api/users/password', passwordData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to change password');
+    }
+  }
+);
+
 // Logout thunk
 export const logout = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
   try {
@@ -152,6 +211,31 @@ const authSlice = createSlice({
         state.token = null;
         state.error = action.payload as string;
         localStorage.removeItem('token');
+      })
+      // Update user profile
+      .addCase(updateUserProfile.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateUserProfile.fulfilled, (state, action: PayloadAction<{ data: { user: User } }>) => {
+        state.loading = false;
+        state.user = action.payload.data.user;
+      })
+      .addCase(updateUserProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Change password
+      .addCase(changePassword.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(changePassword.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(changePassword.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       })
       // Logout
       .addCase(logout.fulfilled, (state) => {

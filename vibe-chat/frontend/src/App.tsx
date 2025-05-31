@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import ChatPage from './pages/ChatPage';
+import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 
 // Components
@@ -26,16 +27,8 @@ const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
-    // Debug logs
-    console.log('App.tsx: Authentication state', { 
-      isAuthenticated, 
-      user, 
-      token: localStorage.getItem('token') 
-    });
-
     // Check if user is authenticated with token but user data is not loaded
     if (isAuthenticated && !user) {
-      console.log('App.tsx: Dispatching getCurrentUser');
       dispatch(getCurrentUser());
     }
     
@@ -67,22 +60,11 @@ const App: React.FC = () => {
         <Route path="/register" element={<Register />} />
         
         {/* Protected routes */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/chat/:chatId"
-          element={
-            <ProtectedRoute>
-              <ChatPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/chat/:chatId" element={<ChatPage />} />
+          <Route path="/profile" element={<Profile />} />
+        </Route>
         
         {/* Redirect and 404 */}
         <Route path="/404" element={<NotFound />} />

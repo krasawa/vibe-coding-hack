@@ -56,6 +56,7 @@ interface ChatState {
   chats: Chat[];
   currentChat: Chat | null;
   messages: Message[];
+  currentUserId: string | null;
   pagination: {
     page: number;
     limit: number;
@@ -71,6 +72,7 @@ const initialState: ChatState = {
   chats: [],
   currentChat: null,
   messages: [],
+  currentUserId: null,
   pagination: {
     page: 1,
     limit: 50,
@@ -272,6 +274,11 @@ const chatSlice = createSlice({
         }
       }
     },
+    setCurrentUser: (state, action: PayloadAction<{ id: string }>) => {
+      // This will be used to track the current user's ID in the chat state
+      // It's useful for determining if a message is from the current user
+      state.currentUserId = action.payload.id;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -400,5 +407,6 @@ export const {
   updateMessageReadStatus,
   addUserTyping,
   removeUserTyping,
+  setCurrentUser,
 } = chatSlice.actions;
 export default chatSlice.reducer; 

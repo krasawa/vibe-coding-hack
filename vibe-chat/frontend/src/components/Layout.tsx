@@ -63,8 +63,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const handleSettings = () => {
     handleClose();
-    // Navigate to settings page (implement later)
-    // navigate('/settings');
+    navigate('/profile');
   };
 
   const drawerContent = <Sidebar onItemClick={() => setMobileOpen(false)} />;
