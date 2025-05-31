@@ -63,21 +63,27 @@ const ChatPage: React.FC = () => {
     ? typingUsers[chatId].filter(id => id !== user?.id)
     : [];
 
+  // Get typing user names from chat participants
+  const typingUserNames = currentTypingUsers
+    .map(userId => {
+      const participant = currentChat?.participants.find((p: any) => p.id === userId);
+      return participant?.displayName || participant?.username || 'Someone';
+    })
+    .filter(name => name !== 'Someone'); // Filter out any unresolved names
+
   useEffect(() => {
     if (chatId) {
+      // Ensure socket is connected
+      if (!socketService.isConnected()) {
+        socketService.init();
+      }
+      
       dispatch(getChat(chatId));
       dispatch(getChatMessages({ chatId }));
       dispatch(markChatAsRead(chatId));
       
       // Join the chat room via socket
       socketService.joinChat(chatId);
-      
-      // Mark messages as read
-      messages.forEach((msg: any) => {
-        if (msg.senderId !== user?.id && !msg.readBy.includes(user?.id || '')) {
-          socketService.markMessageAsRead(msg.id);
-        }
-      });
       
       // Leave the chat room when component unmounts
       return () => {
@@ -348,16 +354,61 @@ const ChatPage: React.FC = () => {
           </Box>
         ))}
         
-        {currentTypingUsers.length > 0 && (
-          <Box sx={{ p: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              Someone is typing...
-            </Typography>
-          </Box>
-        )}
-        
         <div ref={messagesEndRef} />
       </Box>
+
+      {/* Typing Indicator */}
+      {currentTypingUsers.length > 0 && (
+        <Box sx={{ 
+          px: 2, 
+          py: 1,
+          mx: 2,
+          mb: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+        }}>
+          <Box sx={{
+            display: 'flex',
+            gap: 0.5,
+          }}>
+            {/* Animated typing dots */}
+            {[0, 1, 2].map((dot) => (
+              <Box
+                key={dot}
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: 'text.secondary',
+                  animation: 'typing 1.4s infinite ease-in-out',
+                  animationDelay: `${dot * 0.2}s`,
+                  '@keyframes typing': {
+                    '0%, 80%, 100%': {
+                      opacity: 0.3,
+                      transform: 'scale(0.8)',
+                    },
+                    '40%': {
+                      opacity: 1,
+                      transform: 'scale(1)',
+                    },
+                  },
+                }}
+              />
+            ))}
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+            {typingUserNames.length === 1 
+              ? `${typingUserNames[0]} is typing...`
+              : typingUserNames.length === 2
+              ? `${typingUserNames[0]} and ${typingUserNames[1]} are typing...`
+              : typingUserNames.length > 2
+              ? `${typingUserNames[0]}, ${typingUserNames[1]} and ${typingUserNames.length - 2} others are typing...`
+              : 'Someone is typing...'
+            }
+          </Typography>
+        </Box>
+      )}
 
       {/* Message Input */}
       <Box

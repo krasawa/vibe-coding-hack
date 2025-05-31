@@ -55,11 +55,7 @@ export const getChats = async (
       },
       orderBy: {
         chat: {
-          messages: {
-            _max: {
-              createdAt: 'desc',
-            },
-          },
+          updatedAt: 'desc',
         },
       },
     });
@@ -68,8 +64,8 @@ export const getChats = async (
     const chats = userChats.map((userChat) => {
       const { chat } = userChat;
       const otherUsers = chat.userChats
-        .filter((uc) => uc.userId !== req.user.id)
-        .map((uc) => uc.user);
+        .filter((uc: any) => uc.userId !== req.user.id)
+        .map((uc: any) => uc.user);
 
       const lastMessage = chat.messages[0] || null;
 
@@ -78,7 +74,7 @@ export const getChats = async (
         name: chat.isGroup ? chat.name : otherUsers[0]?.displayName || otherUsers[0]?.username,
         isGroup: chat.isGroup,
         description: chat.description,
-        participants: chat.userChats.map((uc) => uc.user),
+        participants: chat.userChats.map((uc: any) => uc.user),
         lastMessage,
         createdAt: chat.createdAt,
         updatedAt: chat.updatedAt,
@@ -469,8 +465,8 @@ export const getChatMessages = async (
     await prisma.message.updateMany({
       where: {
         chatId,
-        NOT: {
-          senderId: req.user.id,
+        senderId: {
+          not: req.user.id,
         },
         NOT: {
           readBy: {
@@ -550,6 +546,17 @@ export const sendMessage = async (
             avatarUrl: true,
           },
         },
+        reactions: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -558,6 +565,12 @@ export const sendMessage = async (
       where: { id: chatId },
       data: { updatedAt: new Date() },
     });
+
+    // Emit the message via socket to all chat members
+    const io = req.app.get('io');
+    if (io) {
+      io.to(chatId).emit('new_message', message);
+    }
 
     res.status(201).json({
       status: 'success',

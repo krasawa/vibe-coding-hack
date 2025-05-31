@@ -25,6 +25,9 @@ const io = new Server(server, {
 
 export const prisma = new PrismaClient();
 
+// Make io instance available to the app
+app.set('io', io);
+
 // Middleware
 app.use(helmet());
 app.use(cors({
@@ -44,6 +47,10 @@ const apiLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 
 // Routes
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.use('/api', routes);
 
 // Error handling

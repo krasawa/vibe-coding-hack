@@ -25,8 +25,10 @@ export const initSocketHandlers = (io: Server, prisma: PrismaClient) => {
   io.use(async (socket: SocketWithUser, next) => {
     try {
       const token = socket.handshake.auth.token;
+      console.log('Socket authentication attempt:', { socketId: socket.id, hasToken: !!token });
 
       if (!token) {
+        console.log('Authentication failed: Token missing');
         return next(new Error('Authentication error: Token missing'));
       }
 
@@ -43,13 +45,16 @@ export const initSocketHandlers = (io: Server, prisma: PrismaClient) => {
       });
 
       if (!user) {
+        console.log('Authentication failed: User not found for ID:', decoded.id);
         return next(new Error('Authentication error: User not found'));
       }
 
       // Attach user to socket
       socket.user = user;
+      console.log('Socket authentication successful:', { userId: user.id, username: user.username });
       next();
     } catch (error) {
+      console.log('Authentication failed: Invalid token', error);
       next(new Error('Authentication error: Invalid token'));
     }
   });
@@ -182,6 +187,7 @@ export const initSocketHandlers = (io: Server, prisma: PrismaClient) => {
     // User typing status
     socket.on('typing', (data) => {
       const { chatId } = data;
+      console.log(`🔵 TYPING EVENT: User ${userId} (${socket.user?.username}) started typing in chat ${chatId}`);
       
       // Broadcast to all users in the chat except sender
       socket.to(chatId).emit('user_typing', {
@@ -189,17 +195,20 @@ export const initSocketHandlers = (io: Server, prisma: PrismaClient) => {
         username: socket.user?.username,
         chatId,
       });
+      console.log(`🔵 TYPING BROADCAST: Sent user_typing event to chat ${chatId} members`);
     });
 
     // User stopped typing
     socket.on('stop_typing', (data) => {
       const { chatId } = data;
+      console.log(`🔴 STOP TYPING EVENT: User ${userId} (${socket.user?.username}) stopped typing in chat ${chatId}`);
       
       // Broadcast to all users in the chat except sender
       socket.to(chatId).emit('user_stop_typing', {
         userId,
         chatId,
       });
+      console.log(`🔴 STOP TYPING BROADCAST: Sent user_stop_typing event to chat ${chatId} members`);
     });
 
     // Join chat
