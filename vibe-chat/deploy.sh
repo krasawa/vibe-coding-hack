@@ -16,12 +16,64 @@ echo -e "${YELLOW}====== Vibe Chat Deployment Script ======${NC}"
 
 # Parse command line arguments
 LOCAL_ONLY=false
+DESTROY=false
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --local-only) LOCAL_ONLY=true; shift ;;
+        --destroy) DESTROY=true; shift ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
 done
+
+# If destroy flag is set, run terraform destroy
+if [ "$DESTROY" = true ]; then
+    echo -e "${YELLOW}Destroying AWS resources...${NC}"
+    
+    # Check AWS CLI
+    if ! command -v aws &> /dev/null; then
+        echo -e "${RED}AWS CLI is not installed. Please install it first.${NC}"
+        exit 1
+    fi
+
+    # Check if logged in to AWS
+    echo -e "${YELLOW}Checking AWS credentials...${NC}"
+    if ! aws sts get-caller-identity &> /dev/null; then
+        echo -e "${YELLOW}AWS credentials not found or invalid. Running aws configure...${NC}"
+        aws configure
+        
+        # Check again after configuration
+        if ! aws sts get-caller-identity &> /dev/null; then
+            echo -e "${RED}AWS credentials still not valid. Please check your configuration.${NC}"
+            exit 1
+        fi
+    fi
+    echo -e "${GREEN}AWS credentials verified.${NC}"
+
+    # Run Terraform destroy
+    echo -e "${YELLOW}Running Terraform destroy...${NC}"
+    cd terraform
+    if [ ! -f .terraform/terraform.tfstate ]; then
+        echo -e "${YELLOW}Initializing Terraform...${NC}"
+        terraform init
+    fi
+    
+    echo -e "${RED}WARNING: This will destroy all AWS resources created by Terraform.${NC}"
+    echo -e "${RED}Type 'yes' to confirm or press Ctrl+C to cancel.${NC}"
+    terraform destroy
+    
+    echo -e "${GREEN}Infrastructure destroyed successfully.${NC}"
+    
+    # Optionally delete ECR repository
+    read -p "Do you want to delete the ECR repository as well? (y/n): " delete_ecr
+    if [[ "$delete_ecr" == "y" || "$delete_ecr" == "Y" ]]; then
+        echo -e "${YELLOW}Deleting ECR repository...${NC}"
+        aws ecr delete-repository --repository-name ${ECR_REPOSITORY_NAME} --region ${AWS_REGION} --force
+        echo -e "${GREEN}ECR repository deleted.${NC}"
+    fi
+    
+    echo -e "${GREEN}Clean-up complete!${NC}"
+    exit 0
+fi
 
 # Build Docker images locally
 echo -e "${YELLOW}Building Docker images locally...${NC}"
@@ -108,6 +160,7 @@ backend_image   = "${ECR_REPOSITORY_URI}:backend-latest"
 frontend_image  = "${ECR_REPOSITORY_URI}:frontend-latest"
 ecr_repository_url = "${ECR_REPOSITORY_URI}"
 jwt_secret      = "$(openssl rand -base64 32)"
+owner           = "Maksym Marusetchenko"
 EOF
 
 echo -e "${GREEN}Created terraform.tfvars file.${NC}"

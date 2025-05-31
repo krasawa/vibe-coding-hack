@@ -51,7 +51,7 @@ variable "subnet_ids" {
 }
 
 variable "security_group_ids" {
-  description = "A list of security group IDs"
+  description = "List of security group IDs"
   type        = list(string)
 }
 
@@ -59,4 +59,10 @@ variable "environment" {
   description = "Environment name"
   type        = string
   default     = "production"
+}
+
+variable "tags" {
+  description = "A map of tags to add to all resources"
+  type        = map(string)
+  default     = {}
 } 

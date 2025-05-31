@@ -82,4 +82,10 @@ variable "ecr_repository_url" {
   description = "The URL of the ECR repository for container images"
   type        = string
   default     = ""
+}
+
+variable "owner" {
+  description = "The owner tag to apply to all AWS resources (required for compliance)"
+  type        = string
+  default     = "Maksym Marusetchenko"
 } 

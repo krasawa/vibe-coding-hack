@@ -123,44 +123,7 @@ npm start
 
 ## AWS Deployment
 
-For deployment to AWS, use the deployment script:
-
-```bash
-cd vibe-chat
-
-# Test Docker builds locally without deploying to AWS
-./deploy.sh --local-only
-
-# Full deployment to AWS
-./deploy.sh
-```
-
-The script will:
-1. Build Docker images for the frontend and backend
-2. When not using --local-only:
-   - Create an ECR repository if it doesn't exist
-   - Push Docker images to ECR
-   - Create a terraform.tfvars file with appropriate values
-   - Initialize and apply Terraform configuration
-   - Handle AWS credentials if not already configured
-
-### Terraform Deployment Details
-
-The AWS deployment includes:
-- VPC with public, private, and database subnets
-- RDS PostgreSQL database
-- S3 bucket for storing uploaded images
-- ECS Fargate for running containerized services
-- Application Load Balancer (ALB) for routing traffic
-
-### Teardown Infrastructure
-
-To destroy all AWS resources when no longer needed:
-
-```bash
-cd vibe-chat/terraform
-terraform destroy
-```
+Is not working
 
 ## License
 
