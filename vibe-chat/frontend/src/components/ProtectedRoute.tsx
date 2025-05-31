@@ -1,38 +1,35 @@
-import React, { useEffect } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import React, { useEffect, ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { CircularProgress, Box } from '@mui/material';
 import { RootState, AppDispatch } from '../store';
 import { getCurrentUser } from '../store/slices/authSlice';
 import Layout from './Layout';
+import LoadingSpinner from './LoadingSpinner';
 
-const ProtectedRoute: React.FC = () => {
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, user, loading } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
-    if (!user && isAuthenticated) {
+    if (isAuthenticated && !user) {
       dispatch(getCurrentUser());
     }
-  }, [dispatch, user, isAuthenticated]);
+  }, [isAuthenticated, user, dispatch]);
 
   if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  return (
-    <Layout>
-      <Outlet />
-    </Layout>
-  );
+  return <Layout>{children}</Layout>;
 };
 
 export default ProtectedRoute; 

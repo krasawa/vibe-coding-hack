@@ -19,15 +19,29 @@ import socketService from './services/socketService';
 // Store
 import { RootState, AppDispatch } from './store';
 import { getCurrentUser } from './store/slices/authSlice';
+import { setCurrentUser } from './store/slices/chatSlice';
 
 const App: React.FC = () => {
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
+    // Debug logs
+    console.log('App.tsx: Authentication state', { 
+      isAuthenticated, 
+      user, 
+      token: localStorage.getItem('token') 
+    });
+
     // Check if user is authenticated with token but user data is not loaded
     if (isAuthenticated && !user) {
+      console.log('App.tsx: Dispatching getCurrentUser');
       dispatch(getCurrentUser());
+    }
+    
+    // Set current user ID in chat slice
+    if (user) {
+      dispatch(setCurrentUser({ id: user.id }));
     }
   }, [isAuthenticated, user, dispatch]);
 
@@ -53,14 +67,26 @@ const App: React.FC = () => {
         <Route path="/register" element={<Register />} />
         
         {/* Protected routes */}
-        <Route path="/" element={<ProtectedRoute />}>
-          <Route index element={<Dashboard />} />
-          <Route path="chat/:chatId" element={<ChatPage />} />
-        </Route>
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat/:chatId"
+          element={
+            <ProtectedRoute>
+              <ChatPage />
+            </ProtectedRoute>
+          }
+        />
         
         {/* Redirect and 404 */}
         <Route path="/404" element={<NotFound />} />
-        <Route path="*" element={<Navigate to="/404" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Box>
   );
