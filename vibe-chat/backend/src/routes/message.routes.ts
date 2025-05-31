@@ -1,9 +1,19 @@
 import { Router } from 'express';
-import { sendMessage, addReaction } from '../controllers/chatController';
+import multer from 'multer';
+import {
+  sendMessage,
+  addReaction,
+} from '../controllers/chatController';
 import { protect } from '../middleware/auth';
-import { upload } from '../middleware/upload';
 
 const router = Router();
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
+});
 
 // Protect all message routes
 router.use(protect);
