@@ -205,6 +205,28 @@ export const acceptContactRequest = async (
       const updatedRequest = await tx.contactRequest.update({
         where: { id: requestId },
         data: { status: 'accepted' },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              avatarUrl: true,
+              isOnline: true,
+              lastSeen: true,
+            },
+          },
+          receiver: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              avatarUrl: true,
+              isOnline: true,
+              lastSeen: true,
+            },
+          },
+        },
       });
 
       // Create contact entries for both users

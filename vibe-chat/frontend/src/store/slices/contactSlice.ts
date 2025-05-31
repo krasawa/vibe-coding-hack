@@ -255,10 +255,24 @@ const contactSlice = createSlice({
             (request) => request.id !== requestId
           );
           
-          // Add to contacts (if not already in the list)
-          const newContact = action.payload.data.contactRequest.sender;
-          if (!state.contacts.some((contact) => contact.id === newContact.id)) {
-            state.contacts.push(newContact);
+          // Add to contacts (if not already in the list and sender exists)
+          const contactRequest = action.payload.data.contactRequest;
+          if (contactRequest.sender) {
+            const newContact = contactRequest.sender;
+            if (!state.contacts.some((contact) => contact.id === newContact.id)) {
+              state.contacts.push(newContact);
+            }
+          } else {
+            // If sender is not available in the response, try to find it in our received requests
+            const originalRequest = state.contactRequests.received.find(
+              req => req.id === requestId
+            );
+            if (originalRequest && originalRequest.sender) {
+              const newContact = originalRequest.sender;
+              if (!state.contacts.some((contact) => contact.id === newContact.id)) {
+                state.contacts.push(newContact);
+              }
+            }
           }
         }
       )

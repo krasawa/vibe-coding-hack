@@ -177,20 +177,20 @@ const Dashboard: React.FC = () => {
               <React.Fragment key={contact.id}>
                 <ListItem>
                   <ListItemAvatar>
-                    <Avatar src={contact.avatarUrl}>
-                      {(contact.displayName || contact.username)[0].toUpperCase()}
+                    <Avatar src={contact?.avatarUrl || ''}>
+                      {((contact?.displayName || contact?.username) || '?')[0].toUpperCase()}
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
-                    primary={contact.displayName || contact.username}
+                    primary={contact?.displayName || contact?.username}
                     secondary={
                       <React.Fragment>
                         <Typography
                           component="span"
                           variant="body2"
-                          color={contact.isOnline ? 'success.main' : 'text.secondary'}
+                          color={contact?.isOnline ? 'success.main' : 'text.secondary'}
                         >
-                          {contact.isOnline ? 'Online' : 'Offline'}
+                          {contact?.isOnline ? 'Online' : 'Offline'}
                         </Typography>
                       </React.Fragment>
                     }
@@ -231,12 +231,12 @@ const Dashboard: React.FC = () => {
                   }
                 >
                   <ListItemAvatar>
-                    <Avatar src={request.sender.avatarUrl}>
-                      {(request.sender.displayName || request.sender.username)[0].toUpperCase()}
+                    <Avatar src={request.sender?.avatarUrl || ''}>
+                      {((request.sender?.displayName || request.sender?.username) || '?')[0].toUpperCase()}
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
-                    primary={request.sender.displayName || request.sender.username}
+                    primary={request.sender?.displayName || request.sender?.username}
                     secondary="Wants to connect with you"
                   />
                 </ListItem>
