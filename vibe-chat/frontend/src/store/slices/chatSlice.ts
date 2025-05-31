@@ -316,6 +316,33 @@ const chatSlice = createSlice({
         state.chats[chatIndex].unreadCount = 0;
       }
     },
+    addReactionToMessage: (state, action: PayloadAction<{ messageId: string; reaction: Reaction }>) => {
+      const { messageId, reaction } = action.payload;
+      
+      // Update in messages list
+      const messageIndex = state.messages.findIndex(m => m.id === messageId);
+      if (messageIndex !== -1) {
+        // Check if reaction already exists (shouldn't happen, but safety check)
+        const existingReactionIndex = state.messages[messageIndex].reactions.findIndex(
+          r => r.userId === reaction.userId && r.emoji === reaction.emoji
+        );
+        
+        if (existingReactionIndex === -1) {
+          state.messages[messageIndex].reactions.push(reaction);
+        }
+      }
+    },
+    removeReactionFromMessage: (state, action: PayloadAction<{ messageId: string; reactionId: string; userId: string; emoji: string }>) => {
+      const { messageId, reactionId, userId, emoji } = action.payload;
+      
+      // Update in messages list
+      const messageIndex = state.messages.findIndex(m => m.id === messageId);
+      if (messageIndex !== -1) {
+        state.messages[messageIndex].reactions = state.messages[messageIndex].reactions.filter(
+          r => !(r.id === reactionId || (r.userId === userId && r.emoji === emoji))
+        );
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -467,5 +494,7 @@ export const {
   removeUserTyping,
   setCurrentUser,
   markChatAsRead,
+  addReactionToMessage,
+  removeReactionFromMessage,
 } = chatSlice.actions;
 export default chatSlice.reducer; 

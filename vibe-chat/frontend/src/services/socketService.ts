@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { store } from '../store';
-import { addMessage, updateMessageReadStatus, addUserTyping, removeUserTyping } from '../store/slices/chatSlice';
+import { addMessage, updateMessageReadStatus, addUserTyping, removeUserTyping, addReactionToMessage, removeReactionFromMessage } from '../store/slices/chatSlice';
 import { updateContactStatus } from '../store/slices/contactSlice';
 
 class SocketService {
@@ -84,6 +84,17 @@ class SocketService {
 
     this.socket.on('user_stop_typing', ({ chatId, userId }) => {
       store.dispatch(removeUserTyping({ chatId, userId }));
+    });
+
+    // Reaction events
+    this.socket.on('reaction_added', ({ messageId, reaction }) => {
+      console.log('Reaction added:', { messageId, reaction });
+      store.dispatch(addReactionToMessage({ messageId, reaction }));
+    });
+
+    this.socket.on('reaction_removed', ({ messageId, reactionId, userId, emoji }) => {
+      console.log('Reaction removed:', { messageId, reactionId, userId, emoji });
+      store.dispatch(removeReactionFromMessage({ messageId, reactionId, userId, emoji }));
     });
 
     // Status events

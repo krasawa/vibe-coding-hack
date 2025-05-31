@@ -632,17 +632,30 @@ export const addReaction = async (
       },
     });
 
+    const io = req.app.get('io');
+
     if (existingReaction) {
       // If reaction already exists, remove it (toggle)
       await prisma.reaction.delete({
         where: { id: existingReaction.id },
       });
 
+      // Emit reaction removal via socket to all chat members
+      if (io) {
+        io.to(message.chatId).emit('reaction_removed', {
+          messageId,
+          reactionId: existingReaction.id,
+          userId: req.user.id,
+          emoji,
+        });
+      }
+
       return res.status(200).json({
         status: 'success',
         data: {
           removed: true,
           emoji,
+          messageId,
         },
       });
     }
@@ -664,6 +677,14 @@ export const addReaction = async (
         },
       },
     });
+
+    // Emit reaction addition via socket to all chat members
+    if (io) {
+      io.to(message.chatId).emit('reaction_added', {
+        messageId,
+        reaction,
+      });
+    }
 
     res.status(201).json({
       status: 'success',
