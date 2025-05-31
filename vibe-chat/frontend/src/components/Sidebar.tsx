@@ -17,6 +17,7 @@ import Stack from '@mui/material/Stack';
 import ListItemButton from '@mui/material/ListItemButton';
 import { Search, Group } from '@mui/icons-material';
 import ChatIcon from '@mui/icons-material/Chat';
+import HomeIcon from '@mui/icons-material/Home';
 import { RootState, AppDispatch } from '../store';
 import { getChats, setCurrentChat } from '../store/slices/chatSlice';
 import StartChatDialog from './StartChatDialog';
@@ -56,6 +57,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onItemClick }) => {
     if (onItemClick) onItemClick();
   };
   
+  const handleDashboardClick = () => {
+    navigate('/');
+    if (onItemClick) onItemClick();
+  };
+  
   // Filter chats based on search term
   const filteredChats = chats.filter(chat => {
     const chatName = chat.name || '';
@@ -74,6 +80,17 @@ const Sidebar: React.FC<SidebarProps> = ({ onItemClick }) => {
         <Typography variant="h6" sx={{ mb: 2 }}>
           Vibe Chat
         </Typography>
+        
+        {/* Dashboard Button */}
+        <Button
+          variant={location.pathname === '/' ? 'contained' : 'outlined'}
+          fullWidth
+          startIcon={<HomeIcon />}
+          onClick={handleDashboardClick}
+          sx={{ mb: 2 }}
+        >
+          Dashboard
+        </Button>
         
         {/* Action Buttons */}
         <Stack direction="row" spacing={1} sx={{ mb: 2 }}>

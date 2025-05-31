@@ -17,6 +17,7 @@ import { Send as SendIcon, AttachFile as AttachFileIcon, Close as CloseIcon } fr
 import SettingsIcon from '@mui/icons-material/Settings';
 import FormatBoldIcon from '@mui/icons-material/FormatBold';
 import FormatItalicIcon from '@mui/icons-material/FormatItalic';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { format } from 'date-fns';
 import { RootState, AppDispatch } from '../store';
 import { getChat, getChatMessages, sendMessage, markChatAsRead } from '../store/slices/chatSlice';
@@ -92,7 +93,7 @@ const ChatPage: React.FC = () => {
         }
       };
     }
-  }, [dispatch, chatId, user?.id]);
+  }, [dispatch, chatId]);
 
   // Mark new messages as read
   useEffect(() => {
@@ -212,6 +213,11 @@ const ChatPage: React.FC = () => {
     navigate('/');
   };
 
+  // Handle back button click
+  const handleBackToDashboard = () => {
+    navigate('/');
+  };
+
   if (!chatId || !currentChat) {
     return (
       <Box
@@ -246,6 +252,15 @@ const ChatPage: React.FC = () => {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Tooltip title="Back to Dashboard">
+            <IconButton
+              onClick={handleBackToDashboard}
+              sx={{ mr: 1 }}
+              color="primary"
+            >
+              <ArrowBackIcon />
+            </IconButton>
+          </Tooltip>
           <Avatar
             src={currentChat.isGroup ? 
               (currentChat as any).avatarUrl : 

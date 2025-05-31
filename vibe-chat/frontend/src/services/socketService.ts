@@ -8,28 +8,53 @@ class SocketService {
   private connected = false;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
+  private isInitializing = false;
 
   init(): void {
+    // Prevent multiple simultaneous initialization attempts
+    if (this.isInitializing) {
+      console.log('Socket initialization already in progress');
+      return;
+    }
+
     const token = localStorage.getItem('token');
     if (!token) {
       console.warn('No token found, cannot initialize socket connection');
       return;
     }
 
+    // If already connected, don't reconnect
+    if (this.socket && this.socket.connected) {
+      console.log('Socket already connected');
+      return;
+    }
+
+    this.isInitializing = true;
+
     // Disconnect existing connection if any
     if (this.socket) {
       this.socket.disconnect();
+      this.socket = null;
     }
 
-    // Connect to the server with the JWT for authentication
-    this.socket = io(process.env.REACT_APP_WS_URL || window.location.origin, {
-      auth: {
-        token,
-      },
-      transports: ['websocket', 'polling'],
-    });
+    const socketUrl = process.env.REACT_APP_WS_URL || window.location.origin;
+    console.log('Attempting to connect to WebSocket at:', socketUrl);
 
-    this.setupListeners();
+    // Connect to the server with the JWT for authentication
+    try {
+      this.socket = io(socketUrl, {
+        auth: {
+          token,
+        },
+        transports: ['websocket', 'polling'],
+      });
+      
+      console.log('Socket.IO instance created, connecting...');
+      this.setupListeners();
+    } catch (error) {
+      console.error('Error creating Socket.IO instance:', error);
+      this.isInitializing = false;
+    }
   }
 
   private setupListeners(): void {
@@ -40,26 +65,43 @@ class SocketService {
       console.log('Socket connected successfully');
       this.connected = true;
       this.reconnectAttempts = 0;
+      this.isInitializing = false;
     });
 
     this.socket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
       this.connected = false;
       
-      // Auto-reconnect on certain disconnect reasons
-      if (reason === 'io server disconnect') {
-        // Server initiated disconnect, try to reconnect
-        setTimeout(() => this.init(), 1000);
+      // Only auto-reconnect on certain disconnect reasons and if not manually disconnected
+      if (reason === 'io server disconnect' || reason === 'transport close') {
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          console.log(`Attempting to reconnect (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+          setTimeout(() => {
+            if (!this.connected && !this.isInitializing) {
+              this.init();
+            }
+          }, 2000 * (this.reconnectAttempts + 1)); // Exponential backoff
+        } else {
+          console.error('Max reconnection attempts reached');
+        }
       }
     });
 
     this.socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
       this.connected = false;
+      this.isInitializing = false;
       this.reconnectAttempts++;
       
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         console.error('Max reconnection attempts reached');
+      } else {
+        // Retry connection with exponential backoff
+        setTimeout(() => {
+          if (!this.connected && !this.isInitializing) {
+            this.init();
+          }
+        }, 3000 * this.reconnectAttempts);
       }
     });
 
@@ -108,9 +150,10 @@ class SocketService {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
-      this.connected = false;
-      this.reconnectAttempts = 0;
     }
+    this.connected = false;
+    this.reconnectAttempts = 0;
+    this.isInitializing = false;
   }
 
   isConnected(): boolean {
